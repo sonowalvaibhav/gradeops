@@ -7,6 +7,11 @@
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://mongodb.com/atlas)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+### Team
+
+- **Himanshu Kumar** — 230122020
+- **Akhil Lavudya** — 230122026
+- **Vaibhav Sonowal** — 230122062
 
 ---
 
@@ -155,7 +160,7 @@ GRADEOPS/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/gradeops.git
+git clone https://github.com/sonowalvaibhav/gradeops.git
 cd gradeops
 ```
 

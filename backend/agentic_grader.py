@@ -1,5 +1,6 @@
 import os
 import json
+from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
@@ -27,17 +28,7 @@ class FullExamReport(BaseModel):
 # --- 2. AGENT DEFINITION ---
 class AgenticGrader:
     def __init__(self):
-        # Initialize Gemini 2.5 Flash
-        self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
-            temperature=0.1,
-            api_key=os.getenv("GEMINI_API_KEY")
-        )
-        
-        # Bind the new Full Exam schema
-        self.structured_llm = self.llm.with_structured_output(FullExamReport)
-
-        # Update the Prompt to handle multiple questions
+        # Define the Prompt to handle multiple questions
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", """You are an expert Professor grading an entire handwritten exam.
             You will be given a JSON array of rubrics (one for each question) and the raw extracted text from a student's exam.
@@ -55,6 +46,20 @@ class AgenticGrader:
             ("human", "Student Exam Text:\n{student_answer}\n\nGrade the entire exam and return the structured report.")
         ])
 
+    def get_chain(self):
+        load_dotenv(override=True)
+        api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        if not api_key or api_key == "your_actual_gemini_api_key_here":
+            raise ValueError("Invalid GEMINI_API_KEY in backend/.env. Please replace 'your_actual_gemini_api_key_here' with your real Gemini API key from https://aistudio.google.com/app/apikey")
+        
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-3.6-flash",
+            temperature=0.1,
+            api_key=api_key
+        )
+        structured_llm = llm.with_structured_output(FullExamReport)
+        return self.prompt | structured_llm
+
     def grade_answer(self, rubric_file_path: str, student_answer: str):
         """Reads the multi-question rubric and grades the full exam."""
         try:
@@ -63,7 +68,7 @@ class AgenticGrader:
         except Exception as e:
             rubric_data = "Error loading rubric."
 
-        chain = self.prompt | self.structured_llm
+        chain = self.get_chain()
         result = chain.invoke({"rubric_data": rubric_data, "student_answer": student_answer})
         
         return result.dict()

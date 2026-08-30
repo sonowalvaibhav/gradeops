@@ -1,10 +1,18 @@
 import os
+import sys
 from dotenv import load_dotenv
+
+load_dotenv()
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
-
-load_dotenv()
 
 # ---------------------------------------------------------
 # 1. THE DATA SCHEMA (What the dashboard will flag)
@@ -20,19 +28,7 @@ class PlagiarismReport(BaseModel):
 # ---------------------------------------------------------
 class PlagiarismDetector:
     def __init__(self):
-        # We use a very low temperature so the AI acts like a strict investigator
-        self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
-            temperature=0.0, 
-            api_key=os.getenv("GEMINI_API_KEY")
-        )
-        self.structured_llm = self.llm.with_structured_output(PlagiarismReport)
-        print("🕵️‍♂️ Plagiarism Agent Initialized. Scanning for anomalies...\n")
-
-    def analyze_papers(self, student_1_answer: str, student_2_answer: str):
-        print("🔍 Comparing Student 1 and Student 2 logic structures...")
-
-        prompt = ChatPromptTemplate.from_messages([
+        self.prompt = ChatPromptTemplate.from_messages([
             ("system", """You are an elite Academic Integrity Investigator.
             Your job is to compare two student handwritten exam answers and detect plagiarism.
             
@@ -42,8 +38,22 @@ class PlagiarismDetector:
             3. NEVER assume an answer is "correct" just because they both wrote it. Treat identical short answers as highly suspicious."""),
             ("human", "Student 1 Answer:\n{student_1}\n\nStudent 2 Answer:\n{student_2}\n\nAnalyze for shared anomalies.")
         ])
+        print("[OK] Plagiarism Agent Initialized.")
 
-        detection_chain = prompt | self.structured_llm
+    def analyze_papers(self, student_1_answer: str, student_2_answer: str):
+        load_dotenv(override=True)
+        api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        if not api_key or api_key == "your_actual_gemini_api_key_here":
+            raise ValueError("Invalid GEMINI_API_KEY in backend/.env. Please replace 'your_actual_gemini_api_key_here' with your real Gemini API key from https://aistudio.google.com/app/apikey")
+
+        print("[*] Comparing Student 1 and Student 2 logic structures...")
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-3.6-flash",
+            temperature=0.0, 
+            api_key=api_key
+        )
+        structured_llm = llm.with_structured_output(PlagiarismReport)
+        detection_chain = self.prompt | structured_llm
 
         return detection_chain.invoke({
             "student_1": student_1_answer,
